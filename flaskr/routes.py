@@ -1,117 +1,78 @@
 from os import environ
+from functools import wraps
+from six.moves.urllib.parse import urlencode
+from werkzeug.exceptions import HTTPException
 import json
 
-from flask import current_app as app
-from flask import redirect, request, url_for, render_template
-
-from . import db
-from .model import User
-
-from flask_login import (
-    current_user,
-    login_required,
-    login_user,
-    logout_user
+from flask import (
+    current_app as app, 
+    redirect, 
+    render_template, 
+    session,
+    url_for,
+    jsonify,
+    Flask
 )
-from oauthlib.oauth2 import WebApplicationClient
+from . import oauth
 
-import requests
+auth0 = oauth.register(
+    'auth0',
+    client_id=environ.get("AUTH0_CLIENT_ID"),
+    client_secret=environ.get("AUTH0_CLIENT_SECRET"),
+    api_base_url=environ.get("AUTH0_BASE_URL"),
+    access_token_url=f'{environ.get("AUTH0_BASE_URL")}/oauth/token',
+    authorize_url=f'{environ.get("AUTH0_BASE_URL")}/authorize',
+    client_kwargs={
+        'scope': 'openid profile email',
+    },
+)
 
+# Here we're using the /callback route.
+@app.route('/callback')
+def callback_handling():
+    # Handles response from token endpoint
+    auth0.authorize_access_token()
+    resp = auth0.get('userinfo')
+    userinfo = resp.json()
 
-GOOGLE_CLIENT_ID = environ.get("GOOGLE_CLIENT_ID", None)
-GOOGLE_CLIENT_SECRET = environ.get("GOOGLE_CLIENT_SECRET", None)
-GOOGLE_DISCOVERY_URL = ("https://accounts.google.com/.well-known/openid-configuration")
-client = WebApplicationClient(GOOGLE_CLIENT_ID)
+    # Store the user information in flask session.
+    session['jwt_payload'] = userinfo
+    session['profile'] = {
+        'user_id': userinfo['sub'],
+        'name': userinfo['name'],
+        'picture': userinfo['picture']
+    }
+    return redirect('/dashboard')
 
-
-@login_required
-@app.route('/hello')
-def hello():
-    name = current_user.name
-    return f"Hello, {name}!"
-
-
-@app.route("/")
-def index():
-    return render_template('home.jinja', title='home')
-
-
-def get_google_provider_cfg():
-    return requests.get(GOOGLE_DISCOVERY_URL).json()
-
-
-@app.route("/login")
+@app.route('/login')
 def login():
-    google_provider_cfg = get_google_provider_cfg()
-    authorization_endpoint = google_provider_cfg["authorization_endpoint"]
+    return auth0.authorize_redirect(redirect_uri=f'{environ.get("FLASK_BASE_URL")}/callback')
 
-    request_uri = client.prepare_request_uri(
-        authorization_endpoint,
-        redirect_uri=request.base_url + "/callback",
-        scope=["openid", "email", "profile"],
-    )
-    return redirect(request_uri)
+def requires_auth(f):
+  @wraps(f)
+  def decorated(*args, **kwargs):
+    if 'profile' not in session:
+      # Redirect to Login page here
+      return redirect('/')
+    return f(*args, **kwargs)
 
+  return decorated
 
-@app.route("/login/callback")
-def callback():
-    code = request.args.get("code")
+@app.route('/dashboard')
+@requires_auth
+def dashboard():
+    return render_template('dashboard.html',
+                           userinfo=session['profile'],
+                           userinfo_pretty=json.dumps(session['jwt_payload'], indent=4))
 
-    google_provider_cfg = get_google_provider_cfg()
-    token_endpoint = google_provider_cfg["token_endpoint"]
-
-    token_url, headers, body = client.prepare_token_request(
-        token_endpoint,
-        authorization_response=request.url,
-        redirect_url=request.base_url,
-        code=code,
-    )
-
-    token_response = requests.post(
-        token_url,
-        headers=headers,
-        data=body,
-        auth=(GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET),
-    )
-
-    client.parse_request_body_response(json.dumps(token_response.json()))
-
-    userinfo_endpoint = google_provider_cfg["userinfo_endpoint"]
-    uri, headers, body = client.add_token(userinfo_endpoint)
-    userinfo_response = requests.get(uri, headers=headers, data=body)
-
-    if userinfo_response.json().get("email_verified"):
-        unique_id = userinfo_response.json()["sub"]  # unused
-        users_email = userinfo_response.json()["email"]
-        picture = userinfo_response.json()["picture"]
-        users_name = userinfo_response.json()["given_name"]
-    else:
-        return "User email not available or not verified by Google.", 400
-
-    existing_user = User.query.filter(
-            User.email == users_email
-        ).first()
-
-    if existing_user:
-        login_user(existing_user)
-        # current_user.is_authenticated = True
-        return redirect(url_for(".index"))
-    else:
-        new_user = User(
-            name=users_name,
-            email=users_email,
-            profile_pic=picture,
-        )
-        db.session.add(new_user)  # Adds new User record to database
-        db.session.commit()
-
-        login_user(new_user)
-        # current_user.is_authenticated = True
-        return redirect(url_for(".index"))
-
-
-@app.route("/logout")
-@login_required
+@app.route('/logout')
 def logout():
-    logout_user()
-    return redirect(url_for("index"))
+    # Clear session stored data
+    session.clear()
+    # Redirect user to logout endpoint
+    params = {'returnTo': url_for('index', _external=True), 'client_id': environ.get("AUTH0_CLIENT_ID")}
+    return redirect(auth0.api_base_url + '/v2/logout?' + urlencode(params))
+
+@app.route('/')
+def index():
+    return '<h1>YOYO</h1>'
