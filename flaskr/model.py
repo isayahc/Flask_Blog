@@ -29,6 +29,15 @@ class User(db.Model, UserMixin):
         index=False
         )
 
+    user_source = db.Column(
+        db.String(180),
+        nullable=False,
+        unique=True,
+        index=False
+        )
+    
+
+
     def __repr__(self):
         return "<User {}>".format(self.email)
 
@@ -38,8 +47,8 @@ class User(db.Model, UserMixin):
         return user
 
     @staticmethod
-    def create(name, email, profile_pic):
-        user = User(name=name, email=email, profile_pic=profile_pic)
+    def create(name, email, profile_pic, user_source):
+        user = User(name=name, email=email, profile_pic=profile_pic, user_source=user_source)
         db.session.add(user)
         db.session.commit()
 

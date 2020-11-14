@@ -13,7 +13,17 @@ from flask import (
     jsonify,
     Flask
 )
+
+from flask_login import (
+    current_user,
+    login_required,
+    login_user,
+    logout_user
+)
+
 from . import oauth
+from . import db
+from .model import User
 
 auth0 = oauth.register(
     'auth0',
@@ -35,13 +45,27 @@ def callback_handling():
     resp = auth0.get('userinfo')
     userinfo = resp.json()
 
+    user_source = userinfo['sub'].split('|')[0] # store this is database
+    #possiblity for crash 
+    # probably add to session
+
     # Store the user information in flask session.
     session['jwt_payload'] = userinfo
     session['profile'] = {
         'user_id': userinfo['sub'],
         'name': userinfo['name'],
-        'picture': userinfo['picture']
+        'picture': userinfo['picture'],
+        'user_source':user_source,
+        'email':userinfo['email']
     }
+
+    # add condition to prevent user from using different sources
+    # if email match but source does not
+    #   return error telling user to use their original source
+    # if user_email is not in db 
+    #   add new User to db
+    # use SQL_TUTORIAL TO FIGURE IT OUT
+
     return redirect('/dashboard')
 
 @app.route('/login')
