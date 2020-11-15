@@ -48,7 +48,7 @@ def callback_handling():
         'user_id': userinfo['sub'],
         'name': userinfo['name'].title(),
         'picture': userinfo['picture'],
-        'user_source':user_source,
+        'user_source':user_source.lower(),
         'email':userinfo['email'].lower()
     }
 
@@ -56,25 +56,25 @@ def callback_handling():
             User.email == userinfo['email'].lower()
         ).first()
     
-    if existing_user and existing_user.user_source != user_source:
+    if existing_user and existing_user.user_source.lower() != user_source.lower():
+        # need to use a flash message
         print(f"Please use {existing_user.user_source} to login")
-        # sys.exit()
         return redirect('/')
     elif existing_user:
         # make sure login is properly set up 
         login_user(existing_user)
         return redirect('/')
     else:
-        new_user = User(
+        new_user = User( 
             name=userinfo['name'].title(),
             email=userinfo['email'].lower(),
             profile_pic=userinfo['picture'],
-            user_source=user_source.title()
-        )
+            user_source=user_source.lower()
+        ) # make sure all of the data is lower
         
         db.session.add(new_user)  # Adds new User record to database
         db.session.commit()
-        login_user(new_user)
+        login_user(new_user, force=True)
         return redirect('/')
 
 

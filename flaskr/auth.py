@@ -1,4 +1,5 @@
 from os import environ
+from functools import wraps
 
 from . import oauth
 
