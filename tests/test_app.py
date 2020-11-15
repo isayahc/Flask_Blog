@@ -1,4 +1,4 @@
 from flaskr import create_app
 
-# GG LIFE
+app = create_app()
 

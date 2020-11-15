@@ -8,11 +8,11 @@
     <body>
         {% if current_user.is_authenticated %}
         <p>Hello, {{current_user.name}}! You're logged in! Email: {{current_user.email}}</p>
-        <div><p>Google Profile Picture:</p>
+        <div><p>{{current_user.user_source.title()}} Profile Picture:</p>
         <img src= {{current_user.profile_pic}} alt="Google profile pic"> </img>
         <a class="button" href="/logout">Logout</a>
         {% else %}
-        <a class="button" href="/login">Google Login non auth g</a>
+        <a class="button" href="/login">Log tf in</a>
         {% endif %}
 
     </body>

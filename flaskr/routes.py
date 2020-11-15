@@ -25,6 +25,8 @@ from . import oauth
 from . import db
 from .model import User
 
+# print(User.query.all())
+
 auth0 = oauth.register(
     'auth0',
     client_id=environ.get("AUTH0_CLIENT_ID"),
@@ -53,11 +55,60 @@ def callback_handling():
     session['jwt_payload'] = userinfo
     session['profile'] = {
         'user_id': userinfo['sub'],
-        'name': userinfo['name'],
+        'name': userinfo['name'].title(),
         'picture': userinfo['picture'],
         'user_source':user_source,
-        'email':userinfo['email']
+        'email':userinfo['email'].lower()
     }
+
+    existing_user = User.query.filter(
+            User.email == userinfo['email']
+        ).first()
+
+    if not existing_user:
+        #uniform set-up
+        new_user = User(
+            name=userinfo['name'].title(),
+            email=userinfo['email'].title(),
+            profile_pic=userinfo['picture'],
+            user_source=user_source.title()
+        )
+        
+        db.session.add(new_user)  # Adds new User record to database
+        db.session.commit()
+        login_user(new_user)
+        return redirect('/dashboard')
+    
+    elif existing_user and existing_user.user_source != user_source and existing_user:
+        return redirect('/')
+    
+    else:
+        login_user(existing_user)
+        return redirect('/dashboard')
+
+    
+
+
+    # if existing_user and existing_user.user_source != user_source:
+    #     return redirect('/')
+    # if  existing_user and existing_user.email == userinfo['email']:
+    #     return redirect('/')
+    # elif existing_user:
+    #     login_user(existing_user)
+    #     return redirect('/dashboard')
+    # else:
+    #     new_user = User(
+    #         name=userinfo['name'],
+    #         email=userinfo['email'],
+    #         profile_pic=userinfo['picture'],
+    #         user_source=user_source
+    #     )
+        
+    #     db.session.add(new_user)  # Adds new User record to database
+    #     db.session.commit()
+    #     login_user(new_user)
+
+
 
     # add condition to prevent user from using different sources
     # if email match but source does not
@@ -66,7 +117,7 @@ def callback_handling():
     #   add new User to db
     # use SQL_TUTORIAL TO FIGURE IT OUT
 
-    return redirect('/dashboard')
+    # return redirect('/dashboard')
 
 @app.route('/login')
 def login():
@@ -99,4 +150,5 @@ def logout():
 
 @app.route('/')
 def index():
-    return '<h1>YOYO</h1>'
+    # add template rendering 
+    return render_template('home.jinja')
