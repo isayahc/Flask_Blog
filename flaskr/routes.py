@@ -1,8 +1,10 @@
+from logging import error
 from os import environ
 from functools import wraps
 from six.moves.urllib.parse import urlencode
 from werkzeug.exceptions import HTTPException
 import json
+import sys
 
 from flask import (
     current_app as app, 
@@ -11,7 +13,8 @@ from flask import (
     session,
     url_for,
     jsonify,
-    Flask
+    Flask,
+    flash
 )
 
 from flask_login import (
@@ -24,20 +27,8 @@ from flask_login import (
 from . import oauth
 from . import db
 from .model import User
+from .auth import auth0
 
-# print(User.query.all())
-
-auth0 = oauth.register(
-    'auth0',
-    client_id=environ.get("AUTH0_CLIENT_ID"),
-    client_secret=environ.get("AUTH0_CLIENT_SECRET"),
-    api_base_url=environ.get("AUTH0_BASE_URL"),
-    access_token_url=f'{environ.get("AUTH0_BASE_URL")}/oauth/token',
-    authorize_url=f'{environ.get("AUTH0_BASE_URL")}/authorize',
-    client_kwargs={
-        'scope': 'openid profile email',
-    },
-)
 
 # Here we're using the /callback route.
 @app.route('/callback')
@@ -62,14 +53,21 @@ def callback_handling():
     }
 
     existing_user = User.query.filter(
-            User.email == userinfo['email']
+            User.email == userinfo['email'].lower()
         ).first()
-
-    if not existing_user:
-        #uniform set-up
+    
+    if existing_user and existing_user.user_source != user_source:
+        print(f"Please use {existing_user.user_source} to login")
+        # sys.exit()
+        return redirect('/')
+    elif existing_user:
+        # make sure login is properly set up 
+        login_user(existing_user)
+        return redirect('/')
+    else:
         new_user = User(
             name=userinfo['name'].title(),
-            email=userinfo['email'].title(),
+            email=userinfo['email'].lower(),
             profile_pic=userinfo['picture'],
             user_source=user_source.title()
         )
@@ -77,47 +75,8 @@ def callback_handling():
         db.session.add(new_user)  # Adds new User record to database
         db.session.commit()
         login_user(new_user)
-        return redirect('/dashboard')
-    
-    elif existing_user and existing_user.user_source != user_source and existing_user:
         return redirect('/')
-    
-    else:
-        login_user(existing_user)
-        return redirect('/dashboard')
 
-    
-
-
-    # if existing_user and existing_user.user_source != user_source:
-    #     return redirect('/')
-    # if  existing_user and existing_user.email == userinfo['email']:
-    #     return redirect('/')
-    # elif existing_user:
-    #     login_user(existing_user)
-    #     return redirect('/dashboard')
-    # else:
-    #     new_user = User(
-    #         name=userinfo['name'],
-    #         email=userinfo['email'],
-    #         profile_pic=userinfo['picture'],
-    #         user_source=user_source
-    #     )
-        
-    #     db.session.add(new_user)  # Adds new User record to database
-    #     db.session.commit()
-    #     login_user(new_user)
-
-
-
-    # add condition to prevent user from using different sources
-    # if email match but source does not
-    #   return error telling user to use their original source
-    # if user_email is not in db 
-    #   add new User to db
-    # use SQL_TUTORIAL TO FIGURE IT OUT
-
-    # return redirect('/dashboard')
 
 @app.route('/login')
 def login():
@@ -128,7 +87,7 @@ def requires_auth(f):
   def decorated(*args, **kwargs):
     if 'profile' not in session:
       # Redirect to Login page here
-      return redirect('/')
+      return redirect('/login')
     return f(*args, **kwargs)
 
   return decorated
@@ -150,5 +109,5 @@ def logout():
 
 @app.route('/')
 def index():
-    # add template rendering 
+    # add template rendering
     return render_template('home.jinja')
