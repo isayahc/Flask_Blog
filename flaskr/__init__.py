@@ -23,20 +23,27 @@ def create_app():
     app = Flask(__name__, instance_relative_config=False)
     app.config.from_object('config.Config')
 
-    oauth.init_app(app)
-
+    #import db
     from .model import db
-
-    db.init_app(app)
     db.app = app
+
+    #init_app 
+    oauth.init_app(app)
     login_manager.init_app(app)
+    db.init_app(app)
+
+    
     login_manager.login_view = "login"
     login_manager.login_message = "NICE!"
 
-
     with app.app_context():
-        from . import routes
+        from flaskr.blueprints.users.routes import users
+        from flaskr.blueprints.post.routes import post
+        from flaskr.blueprints.main.routes import main
 
         db.create_all()
+        app.register_blueprint(users)
+        app.register_blueprint(post)
+        app.register_blueprint(main)
 
         return app

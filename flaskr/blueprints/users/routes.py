@@ -6,6 +6,7 @@ from werkzeug.exceptions import HTTPException
 import json
 import sys
 
+
 from flask import (
     current_app as app, 
     redirect, 
@@ -14,7 +15,8 @@ from flask import (
     url_for,
     jsonify,
     Flask,
-    flash
+    flash,
+    Blueprint
 )
 
 from flask_login import (
@@ -24,14 +26,19 @@ from flask_login import (
     logout_user
 )
 
-from . import oauth
-from . import db
-from .model import User
-from .auth import auth0
+
+from flaskr import db
+
+from flaskr.auth import auth0, requires_auth
+from flaskr.model import User
+
+from flaskr.blueprints.post.forms import PostForm
 
 
-# Here we're using the /callback route.
-@app.route('/callback')
+users = Blueprint('users', __name__,static_url_path='users')
+
+
+@users.route('/callback')
 def callback_handling():
     # Handles response from token endpoint
     auth0.authorize_access_token()
@@ -78,28 +85,18 @@ def callback_handling():
         return redirect('/')
 
 
-@app.route('/login')
+@users.route('/login')
 def login():
     return auth0.authorize_redirect(redirect_uri=f'{environ.get("FLASK_BASE_URL")}/callback')
 
-def requires_auth(f):
-  @wraps(f)
-  def decorated(*args, **kwargs):
-    if 'profile' not in session:
-      # Redirect to Login page here
-      return redirect('/login')
-    return f(*args, **kwargs)
-
-  return decorated
-
-@app.route('/dashboard')
+@users.route('/dashboard')
 @requires_auth
 def dashboard():
     return render_template('dashboard.html',
                            userinfo=session['profile'],
                            userinfo_pretty=json.dumps(session['jwt_payload'], indent=4))
 
-@app.route('/logout')
+@users.route('/logout')
 def logout():
     # Clear session stored data
     session.clear()
@@ -107,7 +104,6 @@ def logout():
     params = {'returnTo': url_for('index', _external=True), 'client_id': environ.get("AUTH0_CLIENT_ID")}
     return redirect(auth0.api_base_url + '/v2/logout?' + urlencode(params))
 
-@app.route('/')
-def index():
-    # add template rendering
-    return render_template('home.jinja')
+@users.route("/testing")
+def about():
+    return "hello"

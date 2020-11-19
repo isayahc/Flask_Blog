@@ -4,7 +4,7 @@
 # How to run
 1. cd into project root folder and run ```py -m venv venv```
 2. run ``` ./venv/bin.activate && pip install -r requirements.txt```
-3. create an google developer account. Get <b>GOOGLE_CLEINT</b> and <b>GOOGLE_ID</b>. Follow video[https://realpython.com/lessons/creating-google-client/]
+3. create an google developer account. Get <b>GOOGLE_CLEINT</b> and <b>GOOGLE_ID</b>. [Follow video](https://realpython.com/lessons/creating-google-client/)
 4. 
 
 # Technologies

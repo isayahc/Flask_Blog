@@ -5,10 +5,9 @@
     <p>Hello, {{current_user.name}}! You're logged in! Email: {{current_user.email}}</p>
     <div><p>{{current_user.user_source.title()}} Profile Picture:</p>
     <img src= {{current_user.profile_pic}} alt="Google profile pic"> </img>
-    <a class="button" href="/logout">Logout</a>
+    <p>Aye, that's you? You're a good looking person, my G.</p>
     {% else %}
-    <a class="button" href="/login">Log tf in</a>
+    <p>No new friends, No new friends. Log in and i'll think about adding you</p>
     {% endif %}
     
 {% endblock content %}
-    
