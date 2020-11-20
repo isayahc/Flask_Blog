@@ -14,6 +14,8 @@
 
 ### flask_login
 - manages login for users
+### Authentication
+- AUTH0
 
 ## Database
 ## sqlite3
