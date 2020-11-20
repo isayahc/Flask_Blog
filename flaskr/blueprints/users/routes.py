@@ -101,7 +101,7 @@ def logout():
     # Clear session stored data
     session.clear()
     # Redirect user to logout endpoint
-    params = {'returnTo': url_for('index', _external=True), 'client_id': environ.get("AUTH0_CLIENT_ID")}
+    params = {'returnTo': url_for('main.index', _external=True), 'client_id': environ.get("AUTH0_CLIENT_ID")}
     return redirect(auth0.api_base_url + '/v2/logout?' + urlencode(params))
 
 @users.route("/testing")

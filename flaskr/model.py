@@ -1,6 +1,9 @@
 """Data models."""
 from flask_login import UserMixin
+from sqlalchemy.orm import backref
 from . import db, login_manager
+
+from datetime import datetime
 
 
 class User(db.Model, UserMixin):
@@ -35,6 +38,8 @@ class User(db.Model, UserMixin):
         unique=True,
         index=False
         )
+
+    post = db.relationship('Post', backref='author', lazy=True)
     
 
     def __repr__(self):
@@ -63,3 +68,14 @@ class User(db.Model, UserMixin):
             return User.query.get(user_id)
         except:
             return None
+
+class Post(db.Model):
+    id_ = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(100), nullable=False)
+    date_posted = db.Column(db.DateTime, nullable=False, default=datetime.utcnow())
+    content = db.Column(db.Text, nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id_'), nullable=False)
+
+    def __repr__(self):
+        return f"<Post ('{self.title},{self.date_posted}')>"
+

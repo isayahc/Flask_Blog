@@ -1,14 +1,16 @@
-{% extends 'layout.jinja' %}
-
+{% extends "layout.jinja" %}
 {% block content %}
-    {% if current_user.is_authenticated %}
-    <p>Hello, {{current_user.name}}! You're logged in! Email: {{current_user.email}}</p>
-    <div><p>{{current_user.user_source.title()}} Profile Picture:</p>
-    <img src= {{current_user.profile_pic}} alt="Google profile pic"> </img>
-    <a class="button" href="/logout">Logout</a>
-    {% else %}
-    <a class="button" href="/login">Log tf in</a>
-    {% endif %}
-    
+    {% for post in posts %}
+        <article class="media content-section">
+          <img class="rounded-circle article-img" src="{{ post.author.profile_pic}}">
+          <div class="media-body">
+            <div class="article-metadata">
+              <a class="mr-2" href="{{ post.author.id_ }}">{{ post.author.name }}</a>
+              <small class="text-muted">{{ post.date_posted.strftime('%Y-%m-%d') }}</small>
+            </div>
+            <h2><a class="article-title" href="{{url_for('post.single_post', post_id=post.id_)}}">{{ post.title }}</a></h2>
+            <p class="article-content">{{ post.content }}</p>
+          </div>
+        </article>
+    {% endfor %}
 {% endblock content %}
-    
