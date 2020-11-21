@@ -1,5 +1,6 @@
 {% extends "layout.jinja" %}
 {% block content %}
+    <h1 class="mb-3">Post by {{user.name}} ({{posts.total}})</h1>
     {% for post in posts.items %}
         <article class="media content-section">
           <img class="rounded-circle article-img" src="{{ post.author.profile_pic}}">
@@ -18,9 +19,9 @@
         
         {% if page_num %}
             {% if posts.page == page_num %}
-                <a class="btn btn-info mb-4"href="{{url_for('main.index', page=page_num)}}">{{page_num}}</a>
+                <a class="btn btn-info mb-4"href="{{url_for('main.user_post', username=user.name, page=page_num)}}">{{page_num}}</a>
             {% else %}
-                <a class="btn btn-outline-info mb-4"href="{{url_for('main.index', page=page_num)}}">{{page_num}}</a>
+                <a class="btn btn-outline-info mb-4"href="{{url_for('main.user_post',  username=user.name, page=page_num)}}">{{page_num}}</a>
             {% endif %}
         {% else %}
             ...
